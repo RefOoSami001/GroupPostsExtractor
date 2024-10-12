@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Post Extractor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet"> <!-- Import Cairo font -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Cairo', sans-serif; /* Use Cairo font */
+            margin: 0; /* Remove default margin */
+            padding: 0; /* Remove default padding */
+            background-color: #f0f0f0; /* Light background color */
+            display: flex; /* Use flexbox for layout */
+            flex-direction: column; /* Arrange children in a column */
+            height: 100vh; /* Full height of the viewport */
+            overflow: hidden; /* Hide overflow for body */
+            position: relative; /* Position relative for fixed elements */
+        }
+
+        .container {
+            display: flex; /* Use flexbox for main content */
+            flex: 1; /* Allow container to grow */
+            margin: 20px 20px 20px; /* Space around the container (bottom margin for header height) */
+            height: calc(100vh - 80px); /* Adjust height to accommodate fixed header */
+        }
+
+        .form-container {
+            background: #ffffff; /* White background for the form */
+            border-radius: 5px; /* Rounded corners */
+            padding: 20px; /* Padding inside the form */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            width: 300px; /* Fixed width for the form */
+            margin-right: 20px; /* Space to the right of the form */
+            position: sticky; /* Sticky positioning for scrolling */
+            top: 80px; /* Align to the bottom of the header */
+            transition: transform 0.3s ease; /* Animation for form */
+        }
+
+        .results-container {
+            flex: 1; /* Allow results area to grow */
+            background: #ffffff; /* White background for results area */
+            border-radius: 5px; /* Rounded corners */
+            padding: 20px; /* Padding inside the results area */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            overflow-y: auto; /* Scroll if content exceeds height */
+            scrollbar-width: thin; /* Firefox scrollbar width */
+            scrollbar-color: #4CAF50 #f0f0f0; /* Firefox scrollbar color */
+        }
+
+        .results-container::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+        }
+
+        .results-container::-webkit-scrollbar-track {
+            background: #f0f0f0; /* Track color */
+        }
+
+        .results-container::-webkit-scrollbar-thumb {
+            background-color: #4CAF50; /* Thumb color */
+            border-radius: 10px; /* Rounded corners for thumb */
+            transition: background-color 0.3s; /* Animation for hover effect */
+        }
+
+        .results-container::-webkit-scrollbar-thumb:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+
+        label {
+            font-weight: bold; /* Bold labels */
+            margin-top: 10px; /* Space above labels */
+            display: block; /* Block display for labels */
+        }
+
+        textarea {
+            width: 100%; /* Full width inputs */
+            padding: 8px; /* Padding inside inputs */
+            margin-top: 5px; /* Space above inputs */
+            border: 1px solid #ccc; /* Light border */
+            border-radius: 4px; /* Rounded corners */
+            box-sizing: border-box; /* Include padding and border in element's total width and height */
+            height: 300px;
+            font-size: 16px;
+            resize: none;
+            transition: border-color 0.3s; /* Animation for border */
+        }
+
+        textarea:focus {
+            border-color: #4CAF50; /* Change border color on focus */
+            outline: none; /* Remove outline */
+        }
+
+        input[type="text"] {
+            width: 100%; /* Full width inputs */
+            padding: 8px; /* Padding inside inputs */
+            margin-top: 5px; /* Space above inputs */
+            border: 1px solid #ccc; /* Light border */
+            border-radius: 4px; /* Rounded corners */
+            box-sizing: border-box; /* Include padding and border in element's total width and height */
+            font-size: 16px;
+            transition: border-color 0.3s; /* Animation for border */
+        }
+
+        input[type="text"]:focus {
+            border-color: #4CAF50; /* Change border color on focus */
+            outline: none; /* Remove outline */
+        }
+
+        button {
+            background-color: #4CAF50; /* Green button */
+            color: white; /* White text */
+            padding: 10px; /* Padding inside button */
+            border: none; /* Remove border */
+            border-radius: 4px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            margin-top: 10px; /* Space above button */
+            width: 100%; /* Full width button */
+            transition: background-color 0.3s, transform 0.3s; /* Animation for hover effect */
+        }
+
+        button:hover {
+            background-color: #45a049; /* Darker green on hover */
+            transform: translateY(-2px); /* Lift button on hover */
+        }
+
+        /* Style for stop button */
+        #stop-button {
+            background-color: red; /* Red button */
+        }
+
+        /* Fixed export button style */
+        #export-button {
+            position: fixed; /* Fixed position */
+            top: 25px; /* Distance from top */
+            right: 58px; /* Distance from right */
+            background-color: #4CAF50; /* Green button */
+            color: white; /* White text */
+            padding: 10px 20px; /* Padding inside button */
+            border: none; /* Remove border */
+            border-radius: 4px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            z-index: 1000; /* Ensure it's on top of other elements */
+            width: 130px;
+            transition: background-color 0.3s; /* Animation for hover effect */
+        }
+
+        #export-button:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+
+        .result {
+            margin-bottom: 10px; /* Space between results */
+            padding: 10px; /* Padding for each result */
+            background: #f9f9f9; /* Light background for results */
+            border: 1px solid #ddd; /* Light border around results */
+            border-radius: 5px; /* Rounded corners */
+            transition: transform 0.2s; /* Animation for hover effect */
+        }
+
+        .result:hover {
+            transform: scale(1.02); /* Slightly scale up on hover */
+        }
+
+        .result a {
+            color: #4CAF50; /* Link color */
+            text-decoration: none; /* Remove underline from links */
+        }
+
+        .result a:hover {
+            text-decoration: underline; /* Underline on hover */
+        }
+
+        /* Notification Styles */
+        #notification {
+            display: none; /* Hidden by default */
+            position: fixed; /* Fixed position */
+            top: 50%; /* Center vertically */
+            left: 50%; /* Center horizontally */
+            transform: translate(-50%, -50%); /* Adjust position to center */
+            background-color: #4CAF50; /* Green background */
+            color: white; /* White text */
+            padding: 15px; /* Padding for notification */
+            border-radius: 5px; /* Rounded corners */
+            z-index: 1000; /* Ensure it's on top */
+            transition: opacity 0.5s ease; /* Fade effect */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="form-container">
+            <h1>Extract Group Posts</h1>
+            <form id="extractForm">
+                <label for="cookies">Cookies (key=value; ...):</label>
+                <textarea id="cookies" name="cookies" required></textarea>
+                
+                <label for="group_link">Group ID:</label>
+                <input type="text" id="group_link" name="group_link" required>
+                
+                <button type="submit" id="start-button">Start Extraction</button>
+                <button id="stop-button" type="button">Stop Extraction</button>
+            </form>
+        </div>
+        
+        <div class="results-container" id="results">
+            <!-- Results will be displayed here -->
+        </div>
+    </div>
+
+    <!-- Fixed Export Button -->
+    <button id="export-button">Export to Excel</button>
+    <div id="notification"></div>
+
+    <script>
+        const startButton = document.getElementById('start-button');
+        const stopButton = document.getElementById('stop-button');
+        const resultsDiv = document.getElementById('results');
+        const notificationDiv = document.getElementById('notification'); // Notification element
+        let extractionInProgress = false;
+        let resultsIntervalId; // Variable to store interval ID
+
+        // Function to show notification
+        function showNotification(message, isSuccess = true) {
+            notificationDiv.textContent = message; // Set notification message
+            notificationDiv.style.backgroundColor = isSuccess ? '#4CAF50' : 'red'; // Set color based on success
+            notificationDiv.style.display = 'block'; // Show notification
+            notificationDiv.style.opacity = '1'; // Make it visible
+            setTimeout(() => {
+                notificationDiv.style.opacity = '0'; // Fade out
+                setTimeout(() => {
+                    notificationDiv.style.display = 'none'; // Hide it after fade out
+                }, 500);
+            }, 3000); // Show for 3 seconds
+        }
+
+        stopButton.onclick = function() {
+            // Stop extraction
+            fetch('/stop', {
+                method: 'POST'
+            }).then(response => response.json())
+            .then(data => {
+                extractionInProgress = false; // Update extraction status
+                startButton.disabled = false; // Enable start button
+                clearInterval(resultsIntervalId); // Stop fetching results
+                showNotification('Extraction stopped!', false); // Show stop notification
+                console.log(data.status);
+            });
+        };
+
+        document.getElementById('export-button').onclick = function() {
+            // Gather results from the DOM
+            const results = Array.from(document.querySelectorAll('.result'));
+            const data = [["Username", "Comment Count", "Reaction Count", "Profile URL", "Post URL", "Message", "Creation Time"]]; // XLSX Header
+
+            results.forEach(result => {
+                const username = result.querySelector('.username').textContent.trim();
+                const commentCount = result.querySelector('.comment-count').textContent.trim();
+                const reactionCount = result.querySelector('.reaction-count').textContent.trim();
+                const profileUrl = result.querySelector('.profile-url').href.trim();
+                const postUrl = result.querySelector('.post-url').href.trim();
+                const message = result.querySelector('.message').textContent.trim();
+                const creationTime = result.querySelector('.creation-time').textContent.trim();
+
+                // Combine data into a row
+                const row = [username, commentCount, reactionCount, profileUrl, postUrl, message, creationTime];
+                data.push(row); // Append row to data
+            });
+
+            // Create a worksheet from the data for XLSX export
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+
+            // Export the workbook as XLSX
+            XLSX.writeFile(workbook, 'extracted_data.xlsx'); // Specify the filename
+        };
+
+
+
+        document.getElementById('extractForm').onsubmit = function(event) {
+            event.preventDefault(); // Prevent form submission
+            startButton.disabled = true; // Disable the start button
+            extractionInProgress = true; // Set extraction in progress
+            showNotification('Extraction started!'); // Show start notification
+            const cookies = document.getElementById('cookies').value;
+            const group_link = document.getElementById('group_link').value;
+
+            fetch('/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ cookies, group_link })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started') {
+                    // Update results in real-time
+                    resultsIntervalId = setInterval(function() { // Store the interval ID
+                        fetch('/results')
+                            .then(response => response.json())
+                            .then(data => {
+                                resultsDiv.innerHTML = ''; // Clear previous results
+                                data.forEach(result => {
+                                    // Create a div for each result
+                                    const resultDiv = document.createElement('div');
+                                    resultDiv.classList.add('result');
+
+                                    // Use structured selectors for easy extraction
+                                    resultDiv.innerHTML = `
+                                        <strong>Username:</strong> <span class="username">${result.username}</span><br>
+                                        <strong>Comment Count:</strong> <span class="comment-count">${result.comment_count}</span><br>
+                                        <strong>Reaction Count:</strong> <span class="reaction-count">${result.reaction_count}</span><br>
+                                        <strong>Profile URL:</strong> <a class="profile-url" href="${result.profile_url}" target="_blank">${result.profile_url}</a><br>
+                                        <strong>Post URL:</strong> <a class="post-url" href="${result.post_url}" target="_blank">${result.post_url}</a><br>
+                                        <strong>Message:</strong> <span class="message">${result.message}</span><br>
+                                        <strong>Creation Time:</strong> <span class="creation-time">${result.creation_time}</span><br>
+                                    `;
+
+                                    // Append the result div to the resultsDiv
+                                    resultsDiv.appendChild(resultDiv);
+                                });
+
+                                // Check if the extraction is done
+                                if (data.status === 'done') {
+                                    extractionInProgress = false; // Update extraction status
+                                    startButton.disabled = false; // Enable start button
+                                    clearInterval(resultsIntervalId); // Stop fetching results
+                                }
+                            });
+                    }, 1000); // Fetch results every 1 second
+                }
+            });
+        };
+
+
+    </script>
+</body>
+</html>

@@ -190,7 +190,6 @@
     </style>
 </head>
 <body>
-
     <div class="container">
         <div class="form-container">
             <h1>Extract Group Posts</h1>
@@ -254,19 +253,18 @@
         document.getElementById('export-button').onclick = function() {
             // Gather results from the DOM
             const results = Array.from(document.querySelectorAll('.result'));
-            const data = [["Username", "Comment Count", "Reaction Count", "Profile URL", "Post URL", "Message", "Creation Time"]]; // XLSX Header
+            const data = [["Caption", "Comments", "Reactions", "Publish Date", "Profile Name", "Post Link"]]; // XLSX Header
 
             results.forEach(result => {
-                const username = result.querySelector('.username').textContent.trim();
-                const commentCount = result.querySelector('.comment-count').textContent.trim();
-                const reactionCount = result.querySelector('.reaction-count').textContent.trim();
-                const profileUrl = result.querySelector('.profile-url').href.trim();
-                const postUrl = result.querySelector('.post-url').href.trim();
-                const message = result.querySelector('.message').textContent.trim();
-                const creationTime = result.querySelector('.creation-time').textContent.trim();
+                const caption = result.querySelector('.caption').textContent.trim();
+                const comments = result.querySelector('.comments').textContent.trim();
+                const reactions = result.querySelector('.reactions').textContent.trim();
+                const publishDate = result.querySelector('.publish-date').textContent.trim();
+                const profileName = result.querySelector('.profile-name').textContent.trim();
+                const postLink = result.querySelector('.post-link').href.trim();
 
                 // Combine data into a row
-                const row = [username, commentCount, reactionCount, profileUrl, postUrl, message, creationTime];
+                const row = [caption, comments, reactions, publishDate, profileName, postLink];
                 data.push(row); // Append row to data
             });
 
@@ -279,13 +277,11 @@
             XLSX.writeFile(workbook, 'extracted_data.xlsx'); // Specify the filename
         };
 
-
-
         document.getElementById('extractForm').onsubmit = function(event) {
-            event.preventDefault(); // Prevent form submission
-            startButton.disabled = true; // Disable the start button
-            extractionInProgress = true; // Set extraction in progress
-            showNotification('Extraction started!'); // Show start notification
+            event.preventDefault();
+            startButton.disabled = true;
+            extractionInProgress = true;
+            showNotification('Extraction started!');
             const cookies = document.getElementById('cookies').value;
             const group_link = document.getElementById('group_link').value;
 
@@ -297,45 +293,43 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'started') {
-                    // Update results in real-time
-                    resultsIntervalId = setInterval(function() { // Store the interval ID
+                    resultsIntervalId = setInterval(function() {
                         fetch('/results')
                             .then(response => response.json())
                             .then(data => {
-                                resultsDiv.innerHTML = ''; // Clear previous results
-                                data.forEach(result => {
-                                    // Create a div for each result
-                                    const resultDiv = document.createElement('div');
-                                    resultDiv.classList.add('result');
+                                // Check if data has changed before updating
+                                if (data.length > resultsDiv.children.length) {
+                                    // Clear previous results
+                                    const newResults = Array.from(data).slice(resultsDiv.children.length);
+                                    newResults.forEach(result => {
+                                        const resultDiv = document.createElement('div');
+                                        resultDiv.classList.add('result');
 
-                                    // Use structured selectors for easy extraction
-                                    resultDiv.innerHTML = `
-                                        <strong>Username:</strong> <span class="username">${result.username}</span><br>
-                                        <strong>Comment Count:</strong> <span class="comment-count">${result.comment_count}</span><br>
-                                        <strong>Reaction Count:</strong> <span class="reaction-count">${result.reaction_count}</span><br>
-                                        <strong>Profile URL:</strong> <a class="profile-url" href="${result.profile_url}" target="_blank">${result.profile_url}</a><br>
-                                        <strong>Post URL:</strong> <a class="post-url" href="${result.post_url}" target="_blank">${result.post_url}</a><br>
-                                        <strong>Message:</strong> <span class="message">${result.message}</span><br>
-                                        <strong>Creation Time:</strong> <span class="creation-time">${result.creation_time}</span><br>
-                                    `;
+                                        resultDiv.innerHTML = `
+                                            <strong>Caption:</strong> <span class="caption">${result.caption}</span><br>
+                                            <strong>Comments:</strong> <span class="comments">${result.comments}</span><br>
+                                            <strong>Reactions:</strong> <span class="reactions">${result.reactions}</span><br>
+                                            <strong>Publish Date:</strong> <span class="publish-date">${result.publish_date}</span><br>
+                                            <strong>Profile Name:</strong> <span class="profile-name">${result.profile_name}</span><br>
+                                            <strong>Post Link:</strong> <a class="post-link" href="${result.post_link}" target="_blank">${result.post_link}</a><br>
+                                        `;
 
-                                    // Append the result div to the resultsDiv
-                                    resultsDiv.appendChild(resultDiv);
-                                });
+                                        resultsDiv.appendChild(resultDiv);
+                                    });
+                                }
 
                                 // Check if the extraction is done
                                 if (data.status === 'done') {
-                                    extractionInProgress = false; // Update extraction status
-                                    startButton.disabled = false; // Enable start button
-                                    clearInterval(resultsIntervalId); // Stop fetching results
+                                    extractionInProgress = false;
+                                    startButton.disabled = false;
+                                    clearInterval(resultsIntervalId);
                                 }
                             });
-                    }, 1000); // Fetch results every 1 second
+                    }, 2000);
                 }
             });
         };
-
-
     </script>
 </body>
+
 </html>
